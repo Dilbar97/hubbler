@@ -1,0 +1,56 @@
+version: '2'
+services:
+  nginx:
+    build:
+      context: ./
+      dockerfile: docker/nginx.docker
+    volumes:
+      - ./docker/nginx:/etc/nginx/conf.d
+      - ./:/var/www:cached
+    ports:
+      - "80:80"
+    links:
+      - php
+  php:
+    build:
+      context: ./
+      dockerfile: docker/php-fpm.docker
+    ports:
+      - "9004:9004"
+    volumes:
+      - ./:/var/www:cached
+    links:
+      - postgres
+      - redis
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+  postgres:
+    image: postgres:11
+    volumes:
+      - hubbler_postgres_database:/var/lib/postgresql/data:Z
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5434:5432"
+    tty: true
+  rabbitmq:
+    image: rabbitmq:3.7.24-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - ./storage/docker/rabbitmq:/var/lib/rabbitmq/mnesia/
+    ports:
+      - "15672:15672"
+  redis:
+    image: redis:3.0
+    ports:
+      - "${REDIS_EXT_PORT}:6379"
+volumes:
+  hubbler_postgres_database:
+    external: true
